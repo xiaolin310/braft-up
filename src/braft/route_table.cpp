@@ -174,17 +174,35 @@ butil::Status refresh_leader(const GroupId& group, int timeout_ms) {
     for (Configuration::const_iterator
             iter = conf.begin(); iter != conf.end(); ++iter) {
         brpc::Channel channel;
-        if (channel.Init(iter->addr, NULL) != 0) {
-            if (error.ok()) {
-                error.set_error(-1, "Fail to init channel to %s",
-                                    iter->to_string().c_str());
-            } else {
-                std::string saved_et = error.error_str();
-                error.set_error(-1, "%s, Fail to init channel to %s",
-                                         saved_et.c_str(),
-                                         iter->to_string().c_str());
+        if (iter->type_ == PeerId::Type::EndPoint) {
+            if (channel.Init(iter->addr, NULL) != 0) {
+                if (error.ok()) {
+                    error.set_error(-1, "Fail to init EndPoint channel to %s",
+                                        iter->to_string().c_str());
+                } else {
+                    std::string saved_et = error.error_str();
+                    error.set_error(-1, "%s, Fail to init EndPoint channel to %s",
+                                            saved_et.c_str(),
+                                            iter->to_string().c_str());
+                }
+                continue;
             }
-            continue;
+        } else {
+            if (channel.Init(iter->hostname_.c_str(), NULL) != 0) {
+                if (error.ok()) {
+                    error.set_error(-1, "Fail to init HostName [%s] or ip [%s] channel to %s",
+                                        iter->hostname_.c_str(),
+                                        butil::endpoint2str(iter->addr).c_str(),
+                                        iter->to_string().c_str());
+                } else {
+                    std::string saved_et = error.error_str();
+                    error.set_error(-1, "%s, Fail to init HostName [%s] channel to %s",
+                                            saved_et.c_str(),
+                                            iter->hostname_.c_str(),
+                                            iter->to_string().c_str());
+                }
+                continue;
+            }
         }
         brpc::Controller cntl;
         cntl.set_timeout_ms(timeout_ms);

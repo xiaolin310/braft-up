@@ -41,7 +41,9 @@ struct ConfigurationEntry {
     void list_peers(std::set<PeerId>* peers) {
         peers->clear();
         conf.append_peers(peers);
+        LOG(INFO) << "new conf: " << conf;
         old_conf.append_peers(peers);
+        LOG(INFO) << "old conf: " << old_conf;
     }
     bool contains(const PeerId& peer) const
     { return conf.contains(peer) || old_conf.contains(peer); }

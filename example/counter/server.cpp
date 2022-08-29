@@ -88,7 +88,10 @@ public:
         node_options.raft_meta_uri = prefix + "/raft_meta";
         node_options.snapshot_uri = prefix + "/snapshot";
         node_options.disable_cli = FLAGS_disable_cli;
-        braft::Node* node = new braft::Node(FLAGS_group, braft::PeerId(addr));
+        braft::PeerId node_host(addr);
+        node_host.hostname_ = "ip-172-31-32-59:" +  FLAGS_port;
+        node_host.type_ = braft::PeerId::Type::HostName;
+        braft::Node* node = new braft::Node(FLAGS_group, node_host);
         if (node->init(node_options) != 0) {
             LOG(ERROR) << "Fail to init raft node";
             delete node;

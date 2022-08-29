@@ -35,7 +35,8 @@ DEFINE_string use_bthread "true" "Use bthread to send request"
 FLAGS "$@" || exit 1
 
 # hostname prefers ipv6
-IP=`hostname -i | awk '{print $NF}'`
+#IP=`hostname -i | awk '{print $NF}'`
+IP=`hostname`
 
 if [ "$FLAGS_valgrind" == "true" ] && [ $(which valgrind) ] ; then
     VALGRIND="valgrind --tool=memcheck --leak-check=full"

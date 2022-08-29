@@ -109,6 +109,7 @@ include_directories(${LEVELDB_INCLUDE_PATH})
 add_executable(counter_client client.cpp ${PROTO_SRC} ${PROTO_HEADER})
 add_executable(counter_server server.cpp ${PROTO_SRC} ${PROTO_HEADER})
 
+#set(CMAKE_THREAD_LIBS_INIT "-lpthread")
 set(DYNAMIC_LIB
     ${CMAKE_THREAD_LIBS_INIT}
     ${GFLAGS_LIBRARY}

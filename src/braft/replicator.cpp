@@ -113,11 +113,22 @@ int Replicator::start(const ReplicatorOptions& options, ReplicatorId *id) {
     brpc::ChannelOptions channel_opt;
     //channel_opt.connect_timeout_ms = *options.heartbeat_timeout_ms;
     channel_opt.timeout_ms = -1; // We don't need RPC timeout
-    if (r->_sending_channel.Init(options.peer_id.addr, &channel_opt) != 0) {
-        LOG(ERROR) << "Fail to init sending channel"
-                   << ", group " << options.group_id;
-        delete r;
-        return -1;
+    if (options.peer_id.type_ == PeerId::Type::EndPoint) {
+        LOG(INFO) << "The peer ip: " << options.peer_id.addr;
+        if (r->_sending_channel.Init(options.peer_id.addr, &channel_opt) != 0) {
+            LOG(ERROR) << "Fail to init sending channel"
+                    << ", group " << options.group_id;
+            delete r;
+            return -1;
+        }
+    } else {
+        LOG(INFO) << "The peer hostname: " << options.peer_id.hostname_.c_str();
+        if (r->_sending_channel.Init(options.peer_id.hostname_.c_str(), &channel_opt) != 0) {
+            LOG(ERROR) << "Fail to init sending channel"
+                    << ", group " << options.group_id;
+            delete r;
+            return -1;
+        }
     }
 
     // bind lifecycle with node, AddRef

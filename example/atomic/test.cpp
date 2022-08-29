@@ -48,10 +48,18 @@ int get(const int64_t id) {
         // Now we known who is the leader, construct Stub and then sending
         // rpc
         brpc::Channel channel;
-        if (channel.Init(leader.addr, NULL) != 0) {
-            LOG(ERROR) << "Fail to init channel to " << leader;
-            bthread_usleep(FLAGS_timeout_ms * 1000L);
-            continue;
+        if (leader.type_ == PeerId::Type::EndPoint) {
+            if (channel.Init(leader.addr, NULL) != 0) {
+                LOG(ERROR) << "Fail to init channel to " << leader;
+                bthread_usleep(FLAGS_timeout_ms * 1000L);
+                continue;
+            }
+        } else {
+            if (channel.Init(leader.hostname_.c_str(), NULL) != 0) {
+                LOG(ERROR) << "Fail to init channel to " << leader;
+                bthread_usleep(FLAGS_timeout_ms * 1000L);
+                continue;
+            }
         }
         // get request
         example::AtomicService_Stub stub(&channel);
@@ -109,10 +117,18 @@ int exchange(const int64_t id, const int64_t value) {
         // Now we known who is the leader, construct Stub and then sending
         // rpc
         brpc::Channel channel;
-        if (channel.Init(leader.addr, NULL) != 0) {
-            LOG(ERROR) << "Fail to init channel to " << leader;
-            bthread_usleep(FLAGS_timeout_ms * 1000L);
-            continue;
+        if (leader.type_ == PeerId::Type::EndPoint) {
+            if (channel.Init(leader.addr, NULL) != 0) {
+                LOG(ERROR) << "Fail to init channel to " << leader;
+                bthread_usleep(FLAGS_timeout_ms * 1000L);
+                continue;
+            }
+        } else {
+            if (channel.Init(leader.hostname_.c_str(), NULL) != 0) {
+                LOG(ERROR) << "Fail to init channel to " << leader;
+                bthread_usleep(FLAGS_timeout_ms * 1000L);
+                continue;
+            } 
         }
         // get request
         example::AtomicService_Stub stub(&channel);
@@ -174,10 +190,18 @@ int cas(const int64_t id, const int64_t old_value, const int64_t new_value) {
         // Now we known who is the leader, construct Stub and then sending
         // rpc
         brpc::Channel channel;
-        if (channel.Init(leader.addr, NULL) != 0) {
-            LOG(ERROR) << "Fail to init channel to " << leader;
-            bthread_usleep(FLAGS_timeout_ms * 1000L);
-            continue;
+        if (leader.type_ == PeerId::Type::EndPoint) {
+            if (channel.Init(leader.addr, NULL) != 0) {
+                LOG(ERROR) << "Fail to init channel to " << leader;
+                bthread_usleep(FLAGS_timeout_ms * 1000L);
+                continue;
+            }
+        } else {
+            if (channel.Init(leader.hostname_.c_str(), NULL) != 0) {
+                LOG(ERROR) << "Fail to init channel to " << leader;
+                bthread_usleep(FLAGS_timeout_ms * 1000L);
+                continue;
+            }
         }
         example::AtomicService_Stub stub(&channel);
 

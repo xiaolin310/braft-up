@@ -53,10 +53,18 @@ static void* sender(void* arg) {
         // Now we known who is the leader, construct Stub and then sending
         // rpc
         brpc::Channel channel;
-        if (channel.Init(leader.addr, NULL) != 0) {
-            LOG(ERROR) << "Fail to init channel to " << leader;
-            bthread_usleep(FLAGS_timeout_ms * 1000L);
-            continue;
+        if (leader.type_ == braft::PeerId::Type::EndPoint) {
+            if (channel.Init(leader.addr, NULL) != 0) {
+                LOG(ERROR) << "Fail to init channel to " << leader;
+                bthread_usleep(FLAGS_timeout_ms * 1000L);
+                continue;
+            }
+        } else {
+            if (channel.Init(leader.hostname_.c_str(), NULL) != 0) {
+                LOG(ERROR) << "Fail to init channel to " << leader;
+                bthread_usleep(FLAGS_timeout_ms * 1000L);
+                continue;
+            } 
         }
         example::BlockService_Stub stub(&channel);
 

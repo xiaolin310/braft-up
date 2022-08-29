@@ -34,11 +34,14 @@ bvar::LatencyRecorder g_latency_recorder("counter_client");
 
 static void* sender(void* arg) {
     while (!brpc::IsAskedToQuit()) {
+        int res;
         braft::PeerId leader;
         // Select leader of the target group from RouteTable
-        if (braft::rtb::select_leader(FLAGS_group, &leader) != 0) {
+        res = braft::rtb::select_leader(FLAGS_group, &leader);
+        if ( res != 0) {
             // Leader is unknown in RouteTable. Ask RouteTable to refresh leader
             // by sending RPCs.
+            LOG(WARNING) << "Get the cached leader of group return code: " << res;
             butil::Status st = braft::rtb::refresh_leader(
                         FLAGS_group, FLAGS_timeout_ms);
             if (!st.ok()) {
@@ -52,10 +55,19 @@ static void* sender(void* arg) {
         // Now we known who is the leader, construct Stub and then sending
         // rpc
         brpc::Channel channel;
-        if (channel.Init(leader.addr, NULL) != 0) {
-            LOG(ERROR) << "Fail to init channel to " << leader;
-            bthread_usleep(FLAGS_timeout_ms * 1000L);
-            continue;
+        if (leader.type_ ==  braft::PeerId::Type::EndPoint) {
+            if (channel.Init(leader.addr, NULL) != 0) {
+                LOG(ERROR) << "Fail to init channel to " << leader;
+                bthread_usleep(FLAGS_timeout_ms * 1000L);
+                continue;
+            }
+        } else {
+            if (channel.Init(leader.hostname_.c_str(), NULL) != 0) {
+                LOG(ERROR) << "Fail to init channel to " << leader;
+                bthread_usleep(FLAGS_timeout_ms * 1000L);
+                continue;
+            }
+
         }
         example::CounterService_Stub stub(&channel);
 

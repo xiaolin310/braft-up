@@ -43,6 +43,7 @@ int Configuration::parse_from(butil::StringPiece conf) {
             LOG(ERROR) << "Fail to parse " << peer_str;
             return -1;
         }
+        LOG(INFO) << "the new peer_id: " << peer.to_string();
         add_peer(peer);
     }
     return 0;

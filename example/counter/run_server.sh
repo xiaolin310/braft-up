@@ -37,7 +37,8 @@ eval set -- "${FLAGS_ARGV}"
 alias error=">&2 echo counter: "
 
 # hostname prefers ipv6
-IP=`hostname -i | awk '{print $NF}'`
+#IP=`hostname -i | awk '{print $NF}'`
+IP=`hostname`
 
 if [ "$FLAGS_valgrind" == "true" ] && [ $(which valgrind) ] ; then
     VALGRIND="valgrind --tool=memcheck --leak-check=full"

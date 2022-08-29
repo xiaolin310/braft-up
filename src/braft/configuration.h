@@ -35,58 +35,105 @@ typedef std::string GroupId;
 typedef std::string VersionedGroupId;
 
 // Represent a participant in a replicating group.
+// Conf, monographdb-0:8002:0,monographdb-1:8002:0,monographdb-2:8002:0
 struct PeerId {
     butil::EndPoint addr; // ip+port.
     int idx; // idx in same addr, default 0
+    std::string hostname_; // hostname+port, e.g. www.foo.com:8765
+    
+    enum class Type {
+        EndPoint = 0,
+        HostName
+    };
+    Type type_;
 
-    PeerId() : idx(0) {}
-    explicit PeerId(butil::EndPoint addr_) : addr(addr_), idx(0) {}
-    PeerId(butil::EndPoint addr_, int idx_) : addr(addr_), idx(idx_) {}
+    PeerId() : idx(0), type_(Type::EndPoint) {}
+    explicit PeerId(butil::EndPoint addr_) : addr(addr_), idx(0), type_(Type::EndPoint) {}
+    PeerId(butil::EndPoint addr_, int idx_) : addr(addr_), idx(idx_), type_(Type::EndPoint) {}
     /*intended implicit*/PeerId(const std::string& str) 
     { CHECK_EQ(0, parse(str)); }
-    PeerId(const PeerId& id) : addr(id.addr), idx(id.idx) {}
+    PeerId(const PeerId& id) : addr(id.addr), idx(id.idx), type_(id.type_) {}
 
     void reset() {
-        addr.ip = butil::IP_ANY;
-        addr.port = 0;
-        idx = 0;
+        if (type_ == Type::EndPoint) {
+            addr.ip = butil::IP_ANY;
+            addr.port = 0;
+            idx = 0;
+        } 
+        else {
+            hostname_.clear();
+            idx = 0;
+        }
     }
 
     bool is_empty() const {
-        return (addr.ip == butil::IP_ANY && addr.port == 0 && idx == 0);
+        if (type_ == Type::EndPoint) {
+            return (addr.ip == butil::IP_ANY && addr.port == 0 && idx == 0);
+        } else {
+            return (hostname_.empty() && idx == 0);
+        }
     }
 
     int parse(const std::string& str) {
         reset();
-        char ip_str[64];
-        if (2 > sscanf(str.c_str(), "%[^:]%*[:]%d%*[:]%d", ip_str, &addr.port, &idx)) {
+        char temp_str[265]; // max length of DNS Name < 255
+        int port;
+        if (2 > sscanf(str.c_str(), "%[^:]%*[:]%d%*[:]%d", temp_str, &port, &idx)) {
             reset();
             return -1;
         }
-        if (0 != butil::str2ip(ip_str, &addr.ip)) {
-            reset();
-            return -1;
+        if (0 != butil::str2ip(temp_str, &addr.ip)) {
+            type_ = Type::HostName;
+            hostname_.append(temp_str);
+            hostname_.append(":");
+            hostname_.append(std::to_string(port));
+            LOG(INFO) << hostname_.c_str();
+        } else {
+            type_ = Type::EndPoint;
+            addr.port = port;
         }
         return 0;
     }
 
     std::string to_string() const {
-        char str[128];
-        snprintf(str, sizeof(str), "%s:%d", butil::endpoint2str(addr).c_str(), idx);
+        // char str[128];
+        char str[265]; // max length of DNS Name < 255
+        if (type_ == Type::EndPoint) {
+            snprintf(str, sizeof(str), "%s:%d", butil::endpoint2str(addr).c_str(), idx);
+        } else {
+            snprintf(str, sizeof(str), "%s:%d", hostname_.c_str(), idx);
+        }
         return std::string(str);
     }
 };
 
 inline bool operator<(const PeerId& id1, const PeerId& id2) {
-    if (id1.addr < id2.addr) {
-        return true;
+    if (id1.type_ == PeerId::Type::EndPoint && id2.type_ == PeerId::Type::EndPoint) {
+        if (id1.addr < id2.addr) {
+            return true;
+        } else {
+            return id1.addr == id2.addr && id1.idx < id2.idx;
+        }
+    } else if (id1.type_ == PeerId::Type::HostName && id2.type_ == PeerId::Type::HostName) {
+        if (id1.hostname_ < id2.hostname_) {
+            return true;
+        } else {
+            return id1.hostname_ == id2.hostname_ && id1.idx < id2.idx;
+        }
     } else {
-        return id1.addr == id2.addr && id1.idx < id2.idx;
+        return false;
     }
+
 }
 
 inline bool operator==(const PeerId& id1, const PeerId& id2) {
-    return (id1.addr == id2.addr && id1.idx == id2.idx);
+    if (id1.type_ == PeerId::Type::EndPoint && id2.type_ == PeerId::Type::EndPoint) {
+        return (id1.addr == id2.addr && id1.idx == id2.idx);
+    } else if (id1.type_ == PeerId::Type::HostName && id2.type_ == PeerId::Type::HostName) {
+        return (id1.hostname_ == id2.hostname_ && id1.idx == id2.idx);
+    } else {
+        return false;
+    }
 }
 
 inline bool operator!=(const PeerId& id1, const PeerId& id2) {
@@ -94,7 +141,11 @@ inline bool operator!=(const PeerId& id1, const PeerId& id2) {
 }
 
 inline std::ostream& operator << (std::ostream& os, const PeerId& id) {
-    return os << id.addr << ':' << id.idx;
+    if (id.type_ == PeerId::Type::EndPoint) {
+        return os << id.addr << ':' << id.idx;
+    } else {
+        return os << id.hostname_ << ':' << id.idx;
+    }
 }
 
 struct NodeId {

@@ -1612,12 +1612,22 @@ void NodeImpl::pre_vote(std::unique_lock<raft_mutex_t>* lck, bool triggered) {
         options.connection_type = brpc::CONNECTION_TYPE_SINGLE;
         options.max_retry = 0;
         brpc::Channel channel;
-        if (0 != channel.Init(iter->addr, &options)) {
-            LOG(WARNING) << "node " << _group_id << ":" << _server_id
+        LOG(INFO) << "server id string: " << _server_id.to_string().c_str(); 
+        LOG(INFO) << "print iter ip addr: " << iter->addr;
+        LOG(INFO) << "print iter info: " << iter->to_string().c_str();
+        if (iter->type_ == PeerId::Type::EndPoint) {
+            if (0 != channel.Init(iter->addr, &options)) {
+                LOG(WARNING) << "node " << _group_id << ":" << _server_id
                          << " channel init failed, addr " << iter->addr;
-            continue;
+                continue;
+            }
+        } else {
+            if (0 != channel.Init(iter->hostname_.c_str(), &options)) {
+                LOG(WARNING) << "node " << _group_id << ":" << _server_id
+                         << " channel init failed, hostname " << iter->hostname_;
+                continue;
+            }
         }
-
         OnPreVoteRPCDone* done = new OnPreVoteRPCDone(
                 *iter, _current_term, _pre_vote_ctx.version(), this);
         done->cntl.set_timeout_ms(_options.election_timeout_ms);
@@ -1717,10 +1727,18 @@ void NodeImpl::request_peers_to_vote(const std::set<PeerId>& peers,
         options.connection_type = brpc::CONNECTION_TYPE_SINGLE;
         options.max_retry = 0;
         brpc::Channel channel;
-        if (0 != channel.Init(iter->addr, &options)) {
-            LOG(WARNING) << "node " << _group_id << ":" << _server_id
-                         << " channel init failed, addr " << iter->addr;
-            continue;
+        if (iter->type_ == PeerId::Type::EndPoint) {
+            if (0 != channel.Init(iter->addr, &options)) {
+                LOG(WARNING) << "node " << _group_id << ":" << _server_id
+                            << " channel init failed, addr " << iter->addr;
+                continue;
+            }
+        } else {
+            if (0 != channel.Init(iter->hostname_.c_str(), &options)) {
+                LOG(WARNING) << "node " << _group_id << ":" << _server_id
+                            << " channel init failed, addr " << iter->hostname_;
+                continue;
+            }
         }
 
         OnRequestVoteRPCDone* done =
