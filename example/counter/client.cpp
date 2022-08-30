@@ -34,14 +34,11 @@ bvar::LatencyRecorder g_latency_recorder("counter_client");
 
 static void* sender(void* arg) {
     while (!brpc::IsAskedToQuit()) {
-        int res;
         braft::PeerId leader;
         // Select leader of the target group from RouteTable
-        res = braft::rtb::select_leader(FLAGS_group, &leader);
-        if ( res != 0) {
+        if ( braft::rtb::select_leader(FLAGS_group, &leader) != 0) {
             // Leader is unknown in RouteTable. Ask RouteTable to refresh leader
             // by sending RPCs.
-            LOG(WARNING) << "Get the cached leader of group return code: " << res;
             butil::Status st = braft::rtb::refresh_leader(
                         FLAGS_group, FLAGS_timeout_ms);
             if (!st.ok()) {

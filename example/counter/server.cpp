@@ -29,7 +29,7 @@ DEFINE_int32(election_timeout_ms, 5000,
 DEFINE_int32(port, 8100, "Listen port of this peer");
 DEFINE_int32(snapshot_interval, 30, "Interval between each snapshot");
 DEFINE_string(conf, "", "Initial configuration of the replication group");
-DEFINE_string(data_path, "./data", "Path of data stored on");
+DEFINE_string(data_path, "./data1", "Path of data stored on");
 DEFINE_string(group, "Counter", "Id of the replication group");
 
 namespace example {
@@ -88,9 +88,11 @@ public:
         node_options.raft_meta_uri = prefix + "/raft_meta";
         node_options.snapshot_uri = prefix + "/snapshot";
         node_options.disable_cli = FLAGS_disable_cli;
+        // braft::Node* node = new braft::Node(FLAGS_group, braft::PeerId(addr));
         braft::PeerId node_host(addr);
-        node_host.hostname_ = "ip-172-31-32-59:" +  FLAGS_port;
+        node_host.hostname_ = "ip-172-31-1-80:" +  std::to_string(FLAGS_port);
         node_host.type_ = braft::PeerId::Type::HostName;
+        LOG(INFO) << node_host.to_string().c_str() << "hostname is: " << node_host.hostname_.c_str();
         braft::Node* node = new braft::Node(FLAGS_group, node_host);
         if (node->init(node_options) != 0) {
             LOG(ERROR) << "Fail to init raft node";

@@ -24,6 +24,7 @@
 #include <vector>
 #include <set>
 #include <map>
+#include <cassert>
 #include <butil/strings/string_piece.h>
 #include <butil/endpoint.h>
 #include <butil/logging.h>
@@ -52,7 +53,27 @@ struct PeerId {
     PeerId(butil::EndPoint addr_, int idx_) : addr(addr_), idx(idx_), type_(Type::EndPoint) {}
     /*intended implicit*/PeerId(const std::string& str) 
     { CHECK_EQ(0, parse(str)); }
-    PeerId(const PeerId& id) : addr(id.addr), idx(id.idx), type_(id.type_) {}
+    PeerId(const PeerId& id) : addr(id.addr), idx(id.idx), hostname_(id.hostname_), type_(id.type_) {}
+    PeerId(PeerId&& id) : addr(std::move(id.addr)), idx(std::move(id.idx)), hostname_(std::move(id.hostname_)),
+                          type_(std::move(id.type_)) {}
+    
+    PeerId& operator=(const PeerId& id) {
+        addr = id.addr;
+        idx = id.idx;
+        hostname_ = id.hostname_;
+        type_ = id.type_;
+
+        return *this;
+    }
+
+    PeerId& operator=(PeerId&& id) {
+        addr = std::move(id.addr);
+        idx = std::move(id.idx);
+        hostname_ = std::move(id.hostname_);
+        type_ = std::move(id.type_);
+
+        return *this;
+    }
 
     void reset() {
         if (type_ == Type::EndPoint) {
@@ -87,7 +108,6 @@ struct PeerId {
             hostname_.append(temp_str);
             hostname_.append(":");
             hostname_.append(std::to_string(port));
-            LOG(INFO) << hostname_.c_str();
         } else {
             type_ = Type::EndPoint;
             addr.port = port;
@@ -108,31 +128,30 @@ struct PeerId {
 };
 
 inline bool operator<(const PeerId& id1, const PeerId& id2) {
-    if (id1.type_ == PeerId::Type::EndPoint && id2.type_ == PeerId::Type::EndPoint) {
+    // only when id1 and id2 have same type, the comparison would make sense.
+    assert(id1.type_ == id2.type_);
+    if (id1.type_ == PeerId::Type::EndPoint) {
         if (id1.addr < id2.addr) {
             return true;
         } else {
             return id1.addr == id2.addr && id1.idx < id2.idx;
         }
-    } else if (id1.type_ == PeerId::Type::HostName && id2.type_ == PeerId::Type::HostName) {
+    } else {
         if (id1.hostname_ < id2.hostname_) {
             return true;
         } else {
             return id1.hostname_ == id2.hostname_ && id1.idx < id2.idx;
         }
-    } else {
-        return false;
     }
 
 }
 
 inline bool operator==(const PeerId& id1, const PeerId& id2) {
-    if (id1.type_ == PeerId::Type::EndPoint && id2.type_ == PeerId::Type::EndPoint) {
+    assert(id1.type_ == id2.type_);
+    if (id1.type_ == PeerId::Type::EndPoint) {
         return (id1.addr == id2.addr && id1.idx == id2.idx);
-    } else if (id1.type_ == PeerId::Type::HostName && id2.type_ == PeerId::Type::HostName) {
-        return (id1.hostname_ == id2.hostname_ && id1.idx == id2.idx);
     } else {
-        return false;
+        return (id1.hostname_ == id2.hostname_ && id1.idx == id2.idx);
     }
 }
 
